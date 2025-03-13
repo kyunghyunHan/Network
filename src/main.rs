@@ -1,53 +1,54 @@
-use reqwest;
-use serde_json::Value;
-use tokio;
+use tokio_test;
+use yahoo_finance_api as yahoo;
+use yahoo_finance_api::time::{Date, Month, OffsetDateTime, UtcOffset};
 
-#[tokio::main]
-async fn main() {
-    let mut usa_all_stocks_list = Vec::new();
+fn main() {
+    let provider = yahoo::YahooConnector::new().unwrap();
 
-    // 거래소 목록
-    let exchanges = ["NYSE", "NASDAQ", "AMEX"];
+    // 날짜 범위를 2년으로 확장
+    let start_date = Date::from_calendar_date(2024, Month::January, 1)
+        .unwrap()
+        .with_hms(0, 0, 0)
+        .unwrap()
+        .assume_utc();
 
-    for &exchange in &exchanges {
-        if let Err(e) = fetch_stocks(exchange, &mut usa_all_stocks_list).await {
-            eprintln!("Error fetching stocks for {}: {}", exchange, e);
-        }
+    let end_date = Date::from_calendar_date(2024, Month::December, 31)
+        .unwrap()
+        .with_hms(0, 0, 0)
+        .unwrap()
+        .assume_utc();
+
+    // SCHD 배당금 정보
+    println!("SCHD 배당금 정보:");
+    let response =
+        tokio_test::block_on(provider.get_quote_history("QDTE", start_date, end_date)).unwrap();
+    let dividends = response.dividends().unwrap();
+    for dividend in dividends {
+        let timestamp = dividend.date;
+        let datetime = OffsetDateTime::from_unix_timestamp(timestamp as i64).unwrap();
+        println!(
+            "배당금: ${:.4}, 날짜: {}-{:02}-{:02}", 
+            dividend.amount, 
+            datetime.year(), 
+            u8::from(datetime.month()), 
+            datetime.day()
+        );
     }
-
-    // 취합한 주식 정보 출력
-    for stock in usa_all_stocks_list {
-        println!("{:?}", stock);
-    }
-}
-
-async fn fetch_stocks(exchange: &str, stock_list: &mut Vec<(String, String, String, f64, f64)>) -> Result<(), reqwest::Error> {
-    let base_url = format!("https://api.stock.naver.com/stock/exchange/{}/marketValue", exchange);
-    let response = reqwest::get(&base_url).await?.json::<Value>().await?;
     
-    let total_count = response["totalCount"].as_u64().unwrap_or(0);
-    let page_count = (total_count / 100) + 1;
-    println!("{} pages for {}", page_count, exchange);
-
-    for page in 1..=page_count {
-        let page_url = format!("{}?page={}&pageSize=100", base_url, page);
-        let response = reqwest::get(&page_url).await?.json::<Value>().await?;
-
-        if let Some(stocks) = response["stocks"].as_array() {
-            for stock in stocks {
-                if stock["stockName"].as_str().unwrap() =="애플"{
-                    println!("{}",stock);
-
-                }
-                // let reuters_code = stock["reutersCode"].as_str().unwrap_or("").to_string();
-                // let symbol_code = stock["symbolCode"].as_str().unwrap_or("").to_string();
-                // let stock_name = stock["stockName"].as_str().unwrap_or("").to_string();
-                // let close_price = stock["closePrice"].as_f64().unwrap_or(0.0);
-                // let dividend_yield = stock["dividend_info"].as_f64().unwrap_or(0.0); // 배당 수익률 추가
-
-                // stock_list.push((reuters_code, symbol_code, stock_name, close_price, dividend_yield));
-            }
-        }
+    // 다른 ETF와 비교 (예: SPY)
+    println!("\nSPY 배당금 정보:");
+    let spy_response =
+        tokio_test::block_on(provider.get_quote_history("SPY", start_date, end_date)).unwrap();
+    let spy_dividends = spy_response.dividends().unwrap();
+    for dividend in spy_dividends {
+        let timestamp = dividend.date;
+        let datetime = OffsetDateTime::from_unix_timestamp(timestamp as i64).unwrap();
+        println!(
+            "배당금: ${:.4}, 날짜: {}-{:02}-{:02}", 
+            dividend.amount, 
+            datetime.year(), 
+            u8::from(datetime.month()), 
+            datetime.day()
+        );
     }
-    Ok(())
 }
