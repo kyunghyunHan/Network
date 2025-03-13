@@ -12,3 +12,7 @@ time = "0.3.39"
 tokio = { version = "1.44.1", features = ["full"] }
 tokio-test = "0.4.4"
 yahoo_finance_api = "3.0.0"
+plotters = "0.3.7"
+
+[patch.crates-io]
+pathfinder_simd = { git = "https://github.com/theoparis/pathfinder.git" }
