@@ -246,3 +246,262 @@ recv()
 
 close()
 ```
+
+
+
+---
+
+
+
+# IP (Internet Protocol)
+
+- 네트워크에서 장치를 구분하기 위한 주소
+- 데이터를 목적지까지 전달하는 역할
+- 데이터의 도착, 순서, 재전송은 보장하지 않음
+
+예)
+
+```
+192.168.0.10
+```
+
+---
+
+# IPv4
+
+- 현재 가장 많이 사용하는 IP 주소 체계
+- 32bit 주소
+- 4개의 숫자로 표현
+- 각 숫자는 0 ~ 255
+
+예)
+
+```
+192.168.0.10
+```
+
+Socket
+
+```c
+AF_INET
+```
+
+---
+
+# IPv6
+
+- IPv4 주소 부족 문제를 해결하기 위한 새로운 IP 주소 체계
+- 128bit 주소
+- IPv4보다 훨씬 많은 주소 사용 가능
+
+예)
+
+```
+2001:db8::1
+```
+
+Socket
+
+```c
+AF_INET6
+```
+
+---
+
+# Port
+
+- 하나의 컴퓨터 안에서 프로그램을 구분하는 번호
+- IP는 컴퓨터를 찾고, Port는 프로그램을 찾는다.
+
+예)
+
+```
+192.168.0.10:8080
+```
+
+대표 Port
+
+| Port | Service |
+|------|----------|
+| 22 | SSH |
+| 53 | DNS |
+| 80 | HTTP |
+| 443 | HTTPS |
+
+---
+
+# DNS (Domain Name System)
+
+- 도메인 이름을 IP 주소로 변환하는 시스템
+
+예)
+
+```
+google.com
+
+↓
+
+142.250.xxx.xxx
+```
+
+사용자는 도메인을 사용하지만 실제 네트워크 통신은 IP 주소를 이용한다.
+
+---
+
+# ARP (Address Resolution Protocol)
+
+- 같은 LAN(Local Area Network)에서 IP 주소를 MAC 주소로 변환하는 프로토콜
+
+예)
+
+```
+192.168.0.10
+
+↓
+
+AA:BB:CC:DD:EE:FF
+```
+
+동작 과정
+
+```
+IP
+
+↓
+
+ARP Request
+
+↓
+
+ARP Reply
+
+↓
+
+MAC Address 확인
+```
+
+---
+
+# HTTP (HyperText Transfer Protocol)
+
+- 웹 브라우저와 웹 서버가 통신하는 응용 계층 프로토콜
+- TCP 기반
+- 기본 Port : 80
+- 암호화되지 않음
+
+대표 Method
+
+- GET
+- POST
+- PUT
+- DELETE
+
+예)
+
+```http
+GET / HTTP/1.1
+Host: example.com
+```
+
+응답
+
+```http
+HTTP/1.1 200 OK
+```
+
+---
+
+# HTTPS (HyperText Transfer Protocol Secure)
+
+- HTTP + TLS(SSL)
+- HTTP 데이터를 암호화하여 전송
+- TCP 기반 (HTTP/1.1, HTTP/2)
+- 기본 Port : 443
+
+장점
+
+- 데이터 암호화
+- 서버 인증
+- 데이터 위변조 방지
+
+---
+
+# HTTP vs HTTPS
+
+| HTTP | HTTPS |
+|------|--------|
+| 암호화 X | 암호화 O |
+| Port 80 | Port 443 |
+| 평문 전송 | TLS 암호화 |
+| 보안 낮음 | 보안 높음 |
+
+---
+
+# 브라우저 접속 과정
+
+```
+URL 입력
+
+↓
+
+DNS
+(도메인을 IP로 변환)
+
+↓
+
+ARP
+(IP를 MAC으로 변환)
+
+↓
+
+TCP
+(3-Way Handshake)
+
+↓
+
+HTTP Request
+
+↓
+
+HTTP Response
+```
+
+---
+
+# 면접 핵심 정리
+
+### IP
+
+- 네트워크에서 장치를 구분하는 주소
+
+### IPv4
+
+- 32bit IP 주소 체계
+
+### IPv6
+
+- 128bit IP 주소 체계
+
+### Port
+
+- 컴퓨터 안에서 프로그램을 구분하는 번호
+
+### DNS
+
+- 도메인을 IP 주소로 변환
+
+### ARP
+
+- IP 주소를 MAC 주소로 변환
+
+### HTTP
+
+- 웹 통신 프로토콜
+- TCP 사용
+- Port 80
+
+### HTTPS
+
+- TLS로 암호화된 HTTP
+- TCP 사용(HTTP/1.1, HTTP/2)
+- Port 443
