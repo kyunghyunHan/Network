@@ -1,628 +1,454 @@
 # OS
+> Linux Driver, OS, System Programming 면접 대비 통합 노트
 
----
+## 목차
 
-# 목차
+1.  Linux 시스템 구조
+2.  Hardware
+3.  Device Driver
+4.  Linux Kernel
+5.  User Space(Application)
+6.  System Call
+7.  Application ↔ Hardware 동작 흐름
+8.  Process
+9.  Thread
+10. Process vs Thread
+11. Memory 구조
+12. Stack vs Heap
+13. Virtual Memory
+14. Scheduler
+15. Context Switch
+16. Mutex
+17. Semaphore
+18. Race Condition
+19. File Descriptor
+20. fork()
+21. exec()
+22. pipe()
+23. mmap()
+24. Interrupt
+25. Device Tree
+26. Register Access
+27. 면접 예상 질문
+28. TSN LAB 공부 우선순위
 
-1. Process
-2. Thread
-3. Process vs Thread
-4. Memory Management
-5. Stack vs Heap
-6. Virtual Memory
-7. Scheduler
-8. Context Switch
-9. Mutex
-10. Semaphore
-11. Race Condition
-12. File Descriptor
-13. fork()
-14. exec()
-15. pipe()
-16. mmap()
-17. 면접 예상 질문
+------------------------------------------------------------------------
 
----
+# 1. Linux 시스템 구조
 
-# 1. Process (프로세스)
-
-## 정의
-
-실행 중인 프로그램.
-
-예를 들어
-
+``` text
++--------------------------------------------------+
+|                Application (User Space)          |
+|  TCP Server, Browser, Terminal, C Program        |
++--------------------------------------------------+
+                    │
+             System Call
+                    │
+                    ▼
++--------------------------------------------------+
+|               Linux Kernel                       |
+| Process Scheduler                                |
+| Memory Manager                                   |
+| File System                                      |
+| Network Stack                                    |
+| Device Driver                                    |
++--------------------------------------------------+
+                    │
+                    ▼
++--------------------------------------------------+
+|                  Hardware                        |
+| CPU, RAM, GPIO, UART, SPI, I2C, Ethernet         |
++--------------------------------------------------+
 ```
-Chrome
-VSCode
-TCP Server
+
+## 핵심
+
+Application은 Hardware를 직접 제어하지 않는다.
+
+``` text
+Application
+↓
+System Call
+↓
+Kernel
+↓
+Driver
+↓
+Hardware
 ```
 
-모두 각각 하나의 Process이다.
+Hardware 이벤트는 반대로 전달된다.
 
-프로세스는 다음 정보를 가진다.
+``` text
+Hardware
+↓
+Interrupt
+↓
+Driver
+↓
+Kernel
+↓
+Application
+```
 
-- PID(Process ID)
-- 자신만의 메모리
-- 열린 파일(File Descriptor)
-- Stack
-- Heap
-- CPU 상태(Register)
+------------------------------------------------------------------------
 
----
+# 2. Hardware
 
-## 특징
+-   CPU
+-   RAM
+-   GPIO
+-   UART
+-   SPI
+-   I2C
+-   Ethernet PHY
+-   USB
+-   SSD
 
-- 다른 Process와 메모리를 공유하지 않는다.
-- 운영체제가 각각 독립적으로 관리한다.
+하드웨어는 스스로 동작하지 않으며 반드시 Driver가 제어한다.
+
+------------------------------------------------------------------------
+
+# 3. Device Driver
+
+역할
+
+-   Hardware 초기화
+-   Register 접근
+-   Interrupt 처리
+-   User Space와 Hardware 연결
 
 예)
 
-```
-Process A
-
-Heap
-
-Stack
-
-
-Process B
-
-Heap
-
-Stack
+``` text
+LED ON
+↓
+GPIO Register = 1
+↓
+LED ON
 ```
 
-둘은 서로 접근할 수 없다.
+------------------------------------------------------------------------
 
----
+# 4. Linux Kernel
 
-# 2. Thread (쓰레드)
+관리 대상
 
-## 정의
+-   Process
+-   Thread
+-   Memory
+-   Scheduler
+-   File System
+-   Network Stack
+-   Device Driver
 
-프로세스 내부에서 실제 실행되는 작업 단위.
+------------------------------------------------------------------------
+
+# 5. User Space(Application)
 
 예)
 
+``` c
+printf("Hello");
+socket();
+read();
+write();
 ```
-TCP Server(Process)
 
-├── Thread 1
-├── Thread 2
-└── Thread 3
+Kernel에게 System Call을 통해 요청한다.
+
+------------------------------------------------------------------------
+
+# 6. System Call
+
+대표 함수
+
+``` c
+open();
+read();
+write();
+close();
+ioctl();
+fork();
+exec();
+mmap();
 ```
 
----
+------------------------------------------------------------------------
 
-## 공유하는 것
+# 7. Process
 
-- Heap
-- Global 변수
-- File Descriptor
+실행 중인 프로그램
 
-## 공유하지 않는 것
+특징
 
-- Stack
-- Register
-- Program Counter
+-   PID 보유
+-   Heap
+-   Stack
+-   Register
+-   File Descriptor 보유
+-   다른 Process와 메모리 공유 안 함
 
----
+------------------------------------------------------------------------
 
-# 3. Process vs Thread
+# 8. Thread
 
-| Process | Thread |
-|----------|--------|
-| 독립 실행 | 프로세스 내부 실행 |
-| 메모리 공유 안 함 | 메모리 공유 |
-| 생성 비용 큼 | 생성 비용 적음 |
-| 안정성 높음 | 빠름 |
+Process 내부 실행 단위
 
----
+공유
 
-# 4. Memory Management
+-   Heap
+-   Global 변수
+-   File Descriptor
 
-프로그램이 실행되면 메모리는 다음과 같이 구성된다.
+공유하지 않음
 
-```
+-   Stack
+-   Register
+-   Program Counter
+
+------------------------------------------------------------------------
+
+# 9. Process vs Thread
+
+  Process         Thread
+  --------------- -------------------
+  독립 실행       Process 내부 실행
+  메모리 공유 X   Heap 공유
+  생성 비용 큼    생성 비용 작음
+  안정성 높음     빠름
+
+------------------------------------------------------------------------
+
+# 10. Memory 구조
+
+``` text
 +----------------------+
 | Text(Code)           |
 +----------------------+
 | Data(Global)         |
 +----------------------+
-| Heap (malloc)        |
-| ↑                    |
+| Heap                 |
 |                      |
 |                      |
-| ↓                    |
-| Stack (Local)        |
+| Stack                |
 +----------------------+
 ```
 
----
-
-## Text
+### Text
 
 프로그램 코드
 
-```
-int main(){}
-```
-
----
-
-## Data
+### Data
 
 전역 변수
 
-```
-int count = 0;
-```
+### Heap
 
----
+-   malloc()
+-   calloc()
+-   realloc()
+-   free() 필요
 
-## Heap
+### Stack
 
-동적 메모리
+-   지역 변수
+-   함수 종료 시 자동 제거
 
-```
-malloc()
+------------------------------------------------------------------------
 
-calloc()
+# 11. Stack vs Heap
 
-realloc()
-```
+  Stack       Heap
+  ----------- -----------------
+  자동 관리   직접 관리
+  빠름        상대적으로 느림
+  지역 변수   malloc
+  자동 삭제   free 필요
 
-개발자가 직접 관리해야 한다.
+------------------------------------------------------------------------
 
-```
-free(ptr);
-```
+# 12. Virtual Memory
 
----
-
-## Stack
-
-지역 변수
-
-```
-void func()
-{
-    int x = 10;
-}
-```
-
-함수가 끝나면 자동 삭제된다.
-
----
-
-# 5. Stack vs Heap
-
-| Stack | Heap |
-|--------|------|
-| 자동 관리 | 직접 관리 |
-| 빠름 | 느림 |
-| 지역 변수 | malloc |
-| 함수 종료 시 삭제 | free 필요 |
-
----
-
-# 6. Virtual Memory
-
-모든 프로세스는 자기만의 메모리를 가진 것처럼 보인다.
-
-실제로는
-
-```
+``` text
 Virtual Address
-
 ↓
-
 MMU
-
 ↓
-
 Physical Memory
 ```
 
-운영체제가 주소를 변환한다.
-
 장점
 
-- 메모리 보호
-- 충돌 방지
-- 큰 메모리 사용 가능
+-   보호
+-   충돌 방지
+-   큰 메모리 공간 제공
 
----
+------------------------------------------------------------------------
 
-# 7. Scheduler
+# 13. Scheduler
 
-CPU는 하나지만
+CPU 실행 순서를 결정한다.
 
-```
-Thread A
+------------------------------------------------------------------------
 
-↓
+# 14. Context Switch
 
-Thread B
+저장 대상
 
-↓
+-   Register
+-   Stack Pointer
+-   Program Counter
 
-Thread C
-```
+------------------------------------------------------------------------
 
-매우 빠르게 번갈아 실행한다.
+# 15. Mutex
 
-이 작업을 Scheduler가 수행한다.
+동시에 하나만 접근 가능.
 
----
-
-# 8. Context Switch
-
-CPU가 실행 대상을 바꾸는 과정
-
-```
-Thread A
-
-↓
-
-Thread B
-```
-
-이때 저장하는 것
-
-- Register
-- Stack Pointer
-- Program Counter
-
-비용이 존재한다.
-
----
-
-# 9. Mutex
-
-Mutual Exclusion
-
-동시에 하나만 접근 가능
-
-예)
-
-```
-count++;
-```
-
-두 Thread가 동시에 접근하면 문제가 생긴다.
-
-Mutex 사용
-
-```c
+``` c
 pthread_mutex_lock();
-
 count++;
-
 pthread_mutex_unlock();
 ```
 
----
+------------------------------------------------------------------------
 
-# 10. Semaphore
+# 16. Semaphore
 
-Mutex와 비슷하지만
-
-동시에 여러 개 허용 가능
+여러 Thread의 동시 접근 허용.
 
 예)
 
-프린터 3대
+Semaphore = 3 → 최대 3명 접근
 
-```
-Semaphore = 3
-```
+------------------------------------------------------------------------
 
-3명까지 동시에 사용 가능.
-
----
-
-# 11. Race Condition
-
-두 Thread가 동시에 같은 데이터를 수정하는 문제.
-
-예)
-
-```
-count++;
-
-count++;
-```
-
-원래 결과
-
-```
-2
-```
-
-실제로
-
-```
-1
-```
-
-이 될 수도 있다.
-
-해결
-
-- Mutex
-- Semaphore
-- Atomic
-
----
-
-# 12. File Descriptor
-
-리눅스에서는 거의 모든 것이 File이다.
-
-```
-File
-
-Socket
-
-Pipe
-
-Terminal
-
-USB
-```
-
-모두 File Descriptor(FD)로 관리한다.
-
-예)
-
-```c
-int fd = open(...);
-
-int sock = socket(...);
-```
-
-둘 다 FD이다.
-
----
-
-# 13. fork()
-
-새로운 Process 생성
-
-```
-Parent
-
-↓
-
-fork()
-
-↓
-
-Parent
-
-Child
-```
-
-예)
-
-```c
-pid_t pid = fork();
-```
-
-pid == 0
-
-→ Child
-
-pid > 0
-
-→ Parent
-
----
-
-# 14. exec()
-
-현재 Process를 다른 프로그램으로 교체
-
-```
-현재
-
-my_program
-
-↓
-
-exec()
-
-↓
-
-ls
-```
-
-예)
-
-```c
-execl("/bin/ls","ls",NULL);
-```
-
----
-
-# 15. pipe()
-
-Process 간 통신
-
-```
-Parent
-
-↓
-
-Pipe
-
-↓
-
-Child
-```
-
-쉘에서
-
-```
-ls | grep txt
-```
-
-도 Pipe이다.
-
----
-
-# 16. mmap()
-
-파일을 메모리에 연결
-
-```
-File
-
-↓
-
-Memory Mapping
-
-↓
-
-Pointer
-```
-
-예)
-
-```c
-char *p = mmap(...);
-
-printf("%c", p[0]);
-```
-
-또는
-
-Shared Memory 구현에도 사용한다.
-
----
-
-# 면접에서 자주 나오는 질문
-
-### Process란?
-
-실행 중인 프로그램이다.
-
----
-
-### Thread란?
-
-프로세스 내부의 실행 단위이다.
-
----
-
-### Process와 Thread 차이는?
-
-Process는 메모리를 공유하지 않는다.
-
-Thread는 Heap과 전역 변수를 공유한다.
-
----
-
-### Stack과 Heap 차이는?
-
-Stack은 자동 관리
-
-Heap은 malloc/free로 직접 관리한다.
-
----
-
-### malloc은 어디에 저장되는가?
-
-Heap
-
----
-
-### 지역 변수는 어디에 저장되는가?
-
-Stack
-
----
-
-### Race Condition이란?
+# 17. Race Condition
 
 여러 Thread가 동시에 같은 데이터를 수정하는 문제.
 
----
+해결
 
-### Mutex란?
+-   Mutex
+-   Semaphore
+-   Atomic
 
-한 번에 하나의 Thread만 접근하도록 하는 동기화 객체.
+------------------------------------------------------------------------
 
----
+# 18. File Descriptor
 
-### Semaphore란?
+모든 것을 정수 번호(FD)로 관리한다.
 
-여러 개의 Thread 접근을 허용하는 동기화 객체.
-
----
-
-### Context Switch란?
-
-CPU가 다른 Process 또는 Thread로 실행을 전환하는 과정.
-
----
-
-### File Descriptor란?
-
-리눅스에서 파일, 소켓 등을 관리하는 정수 번호.
-
----
-
-### socket도 File Descriptor인가?
-
-그렇다.
-
-```
+``` c
+int fd = open(...);
 int sock = socket(...);
 ```
 
-sock도 FD이다.
+Socket도 FD이다.
 
----
+------------------------------------------------------------------------
 
-### fork()란?
+# 19. fork()
 
-현재 Process를 복제하여 Child Process를 만든다.
+현재 Process를 복제한다.
 
----
-
-### exec()란?
-
-현재 Process를 새로운 프로그램으로 교체한다.
-
----
-
-# 공부 우선순위
-
-⭐⭐⭐⭐⭐
-
-- Process
-- Thread
-- Stack / Heap
-- Mutex
-- Semaphore
-- File Descriptor
-
-⭐⭐⭐⭐
-
-- Context Switch
-- Scheduler
-- Virtual Memory
-- fork()
-- exec()
-
-⭐⭐⭐
-
-- pipe()
-- mmap()
-
+``` text
+Parent
+↓
+fork()
+↓
+Parent   Child
 ```
 
-이 정도를 이해하고 C 코드로 간단한 예제를 작성할 수 있다면 **TSN LAB의 "기본적인 OS 지식(쓰레드, 메모리, 프로세스 관리 방법 등)" 요구사항은 충분히 대비할 수 있다.**
+------------------------------------------------------------------------
+
+# 20. exec()
+
+현재 Process를 다른 프로그램으로 교체한다.
+
+------------------------------------------------------------------------
+
+# 21. pipe()
+
+Process 간 통신.
+
+예)
+
+``` bash
+ls | grep txt
+```
+
+------------------------------------------------------------------------
+
+# 22. mmap()
+
+파일을 메모리에 Mapping한다.
+
+Shared Memory 구현에도 사용된다.
+
+------------------------------------------------------------------------
+
+# 23. Interrupt
+
+``` text
+Button
+↓
+Interrupt
+↓
+Driver
+↓
+Kernel
+↓
+Application
+```
+
+------------------------------------------------------------------------
+
+# 24. Device Tree
+
+Linux가 Hardware 정보를 읽는 설정 파일.
+
+------------------------------------------------------------------------
+
+# 25. Register Access
+
+Driver가 Register를 읽고 쓰며 Hardware를 제어한다.
+
+------------------------------------------------------------------------
+
+# 26. 면접 예상 질문
+
+-   Process란?
+-   Thread란?
+-   Process와 Thread 차이?
+-   Stack과 Heap 차이?
+-   malloc은 어디에 저장되는가?
+-   Race Condition이란?
+-   Mutex와 Semaphore 차이?
+-   Context Switch란?
+-   File Descriptor란?
+-   Socket도 FD인가?
+-   fork()와 exec() 차이?
+-   Driver 역할?
+-   System Call이란?
+-   Application이 Hardware를 직접 접근하지 않는 이유는?
+
+------------------------------------------------------------------------
+
+# 27. TSN LAB 공부 우선순위
+
+★★★★★ - Linux 구조 - Process / Thread - Stack / Heap - System Call -
+File Descriptor - Mutex - Semaphore - Interrupt
+
+★★★★☆ - Scheduler - Context Switch - Virtual Memory - fork() - exec()
+
+★★★☆☆ - pipe() - mmap() - Device Tree - Register Access
+
+------------------------------------------------------------------------
+
+# 핵심 한 줄
+
+> **Application → System Call → Kernel → Driver → Hardware**
+
+> **Hardware → Interrupt → Driver → Kernel → Application**
