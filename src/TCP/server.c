@@ -35,6 +35,13 @@ int server(void)
      *
      * 성공하면 File Descriptor 반환
      */
+    /*
+    0 → stdin (키보드 입력)
+    1 → stdout (화면 출력)
+    2 → stderr (에러 출력)
+    3 → 우리가 만든 서버 소켓
+    4 → 클라이언트 소켓
+    */
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (server_fd == -1) {
@@ -180,3 +187,28 @@ int server(void)
 
     return 0;
 }
+
+/*
+
+socket()
+│
+├─ TCP 소켓 하나 생성
+│
+▼
+bind()
+│
+├─ "나는 8080번 포트를 사용할게."
+│
+▼
+listen()
+│
+├─ "이제 접속을 받을 준비 완료."
+│
+▼
+accept()
+│
+├─ "클라이언트가 오면 연결해 줘."
+│
+▼
+recv()/send()
+ */
